@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Biometric Gateway - Operator Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: #050505;
+            color: #39ff14; /* Neon green */
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* CRT Screen effect */
+        .crt::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .terminal-box {
+            box-shadow: 0 0 20px rgba(57, 255, 20, 0.2), inset 0 0 20px rgba(57, 255, 20, 0.1);
+            border: 1px solid rgba(57, 255, 20, 0.5);
+            background-color: #0a0f0a;
+        }
+
+        .btn-terminal {
+            background: transparent;
+            border: 1px solid #39ff14;
+            color: #39ff14;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .btn-terminal:hover {
+            background: #39ff14;
+            color: #050505;
+            box-shadow: 0 0 10px #39ff14;
+        }
+
+        .btn-terminal.deny {
+            border-color: #ff3333;
+            color: #ff3333;
+        }
+        
+        .btn-terminal.deny:hover {
+            background: #ff3333;
+            color: #050505;
+            box-shadow: 0 0 10px #ff3333;
+        }
+
+        .typing-effect {
+            overflow: hidden;
+            white-space: pre-wrap;
+            margin: 0 auto;
+            letter-spacing: .05em;
+        }
+
+        /* Blinking cursor */
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.2em;
+            background-color: #39ff14;
+            animation: blink 1s step-end infinite;
+            vertical-align: bottom;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Glitch effect for rebels */
+        .glitch {
+            position: relative;
+            color: #ff3333;
+            animation: glitch-skew 1s infinite linear alternate-reverse;
+        }
+        
+        @keyframes glitch-skew {
+            0% { transform: skew(0deg); }
+            20% { transform: skew(-10deg); }
+            40% { transform: skew(10deg); }
+            60% { transform: skew(-5deg); }
+            80% { transform: skew(5deg); }
+            100% { transform: skew(0deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 crt">
+
+    <main class="terminal-box rounded-lg w-full max-w-4xl min-h-[600px] p-6 relative flex flex-col z-10">
+        
+        <!-- Header -->
+        <header class="border-b border-green-500/50 pb-4 mb-6 flex justify-between items-end">
+            <div>
+                <h1 class="text-2xl font-bold tracking-wider">OMNICORP: TERMINAL DE SEGURIDAD</h1>
+                <p class="text-xs opacity-70">Sistema A.U.R.A. v9.4 // Módulo de Acceso</p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm">ID Operador: <span class="font-bold text-white">#774-NUEVO</span></p>
+                <p class="text-xs text-green-400/70" id="clock">00:00:00</p>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Area -->
+        <div id="content-area" class="flex-grow flex flex-col">
+            <!-- Content will be injected here by JS -->
+        </div>
+
+        <!-- Action Controls -->
+        <div id="controls-area" class="mt-8 pt-4 border-t border-green-500/30 grid gap-3">
+            <!-- Buttons will be injected here by JS -->
+        </div>
+
+    </main>
+
+    <script>
+        // Update Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('es-ES', { hour12: false }) + ' HSL';
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        const gameData = {
+            boot: {
+                text: `SISTEMA INICIANDO...
+CONECTANDO AL SERVIDOR...
+
+Bienvenido, Guardia. 
+La ciudad te necesita.
+
+REGLAS DE SEGURIDAD:
+> Ingresa tu ID para iniciar.
+> Lee las instrucciones. 
+> No compartas tu contraseña.`,
+                buttons: [
+                    { label: "> [ INICIAR TURNO ]", target: "rules", class: "btn-terminal" }
+                ]
+            },
+            rules: {
+                text: `ATENCIÓN:
+
+Personas peligrosas (Rebeldes) quieren entrar a la ciudad. Ellos esconden mensajes secretos usando MALA GRAMÁTICA en inglés.
+
+TU TRABAJO:
+1. Lee el mensaje del ciudadano (en inglés).
+2. Si el inglés es CORRECTO (Inocente), APRUEBA el acceso.
+3. Si ves ERRORES GRAMATICALES (Rebelde), DENIEGA el acceso.
+4. ¡Cuidado! Si deniegas a un inocente, perderás puntos.
+
+COMANDOS:
+* Encontrar errores en condicionales (If) e imperativos.
+* Hacer clic en "Aprobar" o "Denegar".`,
+                buttons: [
+                    { label: "> [ ENTENDIDO. INICIAR NIVEL 1 ]", target: "case1", class: "btn-terminal" }
+                ]
+            },
+
+            // NIVEL 1 (REBELDE - Gramática incorrecta)
+            case1: {
+                text: `NIVEL 1: CIUDADANO #104 
+[ESTADO: PENDIENTE]
+
+MENSAJE DEL CIUDADANO:
+"Hello, officer. Please open the gate. If you lets me in, I will gives you information. I needs to see my family today."`,
+                buttons: [
+                    { label: "> [ APROBAR ACCESO ]", target: "fail1", class: "btn-terminal" },
+                    { label: "> [ DENEGAR ACCESO ]", target: "success1", class: "btn-terminal deny" }
+                ]
+            },
+            fail1: {
+                text: `[ ! ] PELIGRO - ERROR [ ! ]
+¡Dejaste entrar a un rebelde! Su mensaje tenía errores intencionales.
+
+Incorrecto: "If you *lets* me in, I will *gives* you..."
+Correcto: "If you *let* me in, I will *give* you..."
+
+El jefe te está vigilando.`,
+                buttons: [{ label: "> [ REINTENTAR NIVEL 1 ]", target: "case1", class: "btn-terminal" }]
+            },
+            success1: {
+                text: `[ ✓ ] CORRECTO. ACCESO DENEGADO.
+¡Bien hecho! Encontraste los errores de tercera persona ("lets", "gives", "needs"). El rebelde fue atrapado.`,
+                buttons: [{ label: "> [ SIGUIENTE CIUDADANO ]", target: "case2", class: "btn-terminal" }]
+            },
+
+            // NIVEL 2 (INOCENTE - Gramática correcta)
+            case2: {
+                text: `NIVEL 2: CIUDADANO #218 
+[ESTADO: PENDIENTE]
+
+MENSAJE DEL CIUDADANO:
+"Hello. I am a doctor. If someone is sick, I will help them. Please let me in. The hospital needs me."`,
+                buttons: [
+                    { label: "> [ APROBAR ACCESO ]", target: "success2", class: "btn-terminal" },
+                    { label: "> [ DENEGAR ACCESO ]", target: "fail2", class: "btn-terminal deny" }
+                ]
+            },
+            fail2: {
+                text: `[ ! ] ERROR DE PROCEDIMIENTO [ ! ]
+¡Denegaste el paso a un inocente! 
+Su inglés era PERFECTO. No había ningún error gramatical.
+
+Regla: Si el inglés es correcto, debes APROBAR.`,
+                buttons: [{ label: "> [ REINTENTAR NIVEL 2 ]", target: "case2", class: "btn-terminal" }]
+            },
+            success2: {
+                text: `[ ✓ ] CORRECTO. ACCESO APROBADO.
+¡Excelente! Era un doctor real. Su gramática era perfecta ("If someone is sick, I will help them").`,
+                buttons: [{ label: "> [ SIGUIENTE CIUDADANO ]", target: "case3", class: "btn-terminal" }]
+            },
+
+            // NIVEL 3 (REBELDE - Gramática incorrecta)
+            case3: {
+                text: `NIVEL 3: CIUDADANO #340 
+[ESTADO: PENDIENTE]
+
+MENSAJE DEL CIUDADANO:
+"Hi guard. I have money. If you open the door, I gives you 100 dollars. Do not tells the boss."`,
+                buttons: [
+                    { label: "> [ APROBAR ACCESO ]", target: "fail3", class: "btn-terminal" },
+                    { label: "> [ DENEGAR ACCESO ]", target: "success3", class: "btn-terminal deny" }
+                ]
+            },
+            fail3: {
+                text: `[ ! ] PELIGRO - ERROR [ ! ]
+¡Dejaste entrar a un infiltrado con dinero falso!
+
+Incorrecto: "...I *gives* you" / "Do not *tells* the boss."
+Correcto: "...I *give* you" / "Do not *tell* the boss." (Imperativo).`,
+                buttons: [{ label: "> [ REINTENTAR NIVEL 3 ]", target: "case3", class: "btn-terminal" }]
+            },
+            success3: {
+                text: `[ ✓ ] CORRECTO. ACCESO DENEGADO.
+No aceptaste el soborno y encontraste el código oculto en los errores "gives" y "tells". ¡Sigue así!`,
+                buttons: [{ label: "> [ SIGUIENTE CIUDADANO ]", target: "case4", class: "btn-terminal" }]
+            },
+
+            // NIVEL 4 (INOCENTE - Gramática correcta)
+            case4: {
+                text: `NIVEL 4: CIUDADANO #401 
+[ESTADO: PENDIENTE]
+
+MENSAJE DEL CIUDADANO:
+"Good morning. I work in the kitchen. If I am late, the boss will be angry. Open the door, please."`,
+                buttons: [
+                    { label: "> [ APROBAR ACCESO ]", target: "success4", class: "btn-terminal" },
+                    { label: "> [ DENEGAR ACCESO ]", target: "fail4", class: "btn-terminal deny" }
+                ]
+            },
+            fail4: {
+                text: `[ ! ] ERROR DE PROCEDIMIENTO [ ! ]
+Bloqueaste a un cocinero inocente.
+El imperativo "Open the door" y el condicional "If I am late..." estaban escritos correctamente.`,
+                buttons: [{ label: "> [ REINTENTAR NIVEL 4 ]", target: "case4", class: "btn-terminal" }]
+            },
+            success4: {
+                text: `[ ✓ ] CORRECTO. ACCESO APROBADO.
+El cocinero pasó sin problemas. Todo estaba en orden.`,
+                buttons: [{ label: "> [ SIGUIENTE CIUDADANO ]", target: "case5", class: "btn-terminal" }]
+            },
+
+            // NIVEL 5 (REBELDE + TRANSMEDIA)
+            case5: {
+                text: `NIVEL 5: CIUDADANO #599 
+[ESTADO: PENDIENTE - ANOMALÍA DETECTADA]
+
+MENSAJE DEL CIUDADANO:
+"Hey. My ID is new. If you looks closely, it is perfect. Lets me pass."`,
+                buttons: [
+                    { label: "> [ APROBAR ACCESO ]", target: "fail5", class: "btn-terminal" },
+                    { label: "> [ DENEGAR ACCESO ]", target: "success5", class: "btn-terminal deny" },
+                    { label: "> [ INICIAR ESCANEO PROFUNDO ]", target: "deepscan5", class: "btn-terminal text-yellow-400 border-yellow-400 hover:bg-yellow-400" }
+                ]
+            },
+            fail5: {
+                text: `[ ! ] PELIGRO - ERROR [ ! ]
+¡Esa identificación era falsa!
+Incorrecto: "If you *looks* closely..." y "*Lets* me pass."
+Correcto: "If you *look* closely..." y "*Let* me pass."`,
+                buttons: [{ label: "> [ REINTENTAR NIVEL 5 ]", target: "case5", class: "btn-terminal" }]
+            },
+            success5: {
+                text: `[ ✓ ] CORRECTO. ACCESO DENEGADO.
+El rebelde no pudo engañarte.`,
+                buttons: [{ label: "> [ SIGUIENTE CIUDADANO ]", target: "case6", class: "btn-terminal" }]
+            },
+            deepscan5: {
+                text: `ESCANEANDO... [ARCHIVOS SECRETOS ENCONTRADOS]
+El sistema detectó un audio interceptado en su teléfono.
+
+MENSAJE DE VOZ (Inglés detectado):
+"Friend, listen to me. OmniCorp is bad. Do not use correct grammar. If the guard is our friend, they will open the door. Delete this message."
+
+Has descubierto que la Resistencia es real.`,
+                buttons: [{ label: "> [ CERRAR AUDIO Y CONTINUAR ]", target: "case6", class: "btn-terminal" }]
+            },
+
+            // NIVEL 6 (REBELDE - Gramática incorrecta)
+            case6: {
+                text: `NIVEL 6: CIUDADANO #612 
+[ESTADO: PENDIENTE]
+
+MENSAJE DEL CIUDADANO:
+"Hello friend. I am a mechanic. If the machine break, I will fix it. Opens the gate."`,
+                buttons: [
+                    { label: "> [ APROBAR ACCESO ]", target: "fail6", class: "btn-terminal" },
+                    { label: "> [ DENEGAR ACCESO ]", target: "success6", class: "btn-terminal deny" }
+                ]
+            },
+            fail6: {
+                text: `[ ! ] PELIGRO - ERROR [ ! ]
+Era un saboteador, no un mecánico.
+Incorrecto: "If the machine *break*..." y "*Opens* the gate."
+Correcto: "If the machine *breaks*..." y "*Open* the gate."`,
+                buttons: [{ label: "> [ REINTENTAR NIVEL 6 ]", target: "case6", class: "btn-terminal" }]
+            },
+            success6: {
+                text: `[ ✓ ] CORRECTO. ACCESO DENEGADO.
+Identificaste los errores en el condicional y el imperativo. ¡Excelente trabajo!`,
+                buttons: [{ label: "> [ SIGUIENTE CIUDADANO ]", target: "case7", class: "btn-terminal" }]
+            },
+
+            // NIVEL 7 (INOCENTE - Gramática correcta)
+            case7: {
+                text: `NIVEL 7: CIUDADANO #788 
+[ESTADO: PENDIENTE]
+
+MENSAJE DEL CIUDADANO:
+"Hi. I am a teacher. If the students study, they will pass the test. Read my document."`,
+                buttons: [
+                    { label: "> [ APROBAR ACCESO ]", target: "success7", class: "btn-terminal" },
+                    { label: "> [ DENEGAR ACCESO ]", target: "fail7", class: "btn-terminal deny" }
+                ]
+            },
+            fail7: {
+                text: `[ ! ] ERROR DE PROCEDIMIENTO [ ! ]
+Acabas de rechazar a un profesor de la ciudad.
+Su inglés no tenía errores. ("If the students study, they will pass").`,
+                buttons: [{ label: "> [ REINTENTAR NIVEL 7 ]", target: "case7", class: "btn-terminal" }]
+            },
+            success7: {
+                text: `[ ✓ ] CORRECTO. ACCESO APROBADO.
+El profesor está a salvo dentro de la ciudad.`,
+                buttons: [{ label: "> [ SIGUIENTE CIUDADANO ]", target: "case8", class: "btn-terminal" }]
+            },
+
+            // NIVEL 8 (REBELDE - Gramática incorrecta)
+            case8: {
+                text: `NIVEL 8: CIUDADANO #805 
+[ESTADO: PENDIENTE]
+
+MENSAJE DEL CIUDADANO:
+"Good evening. If I stays outside, the monsters will eats me. Help me."`,
+                buttons: [
+                    { label: "> [ APROBAR ACCESO ]", target: "fail8", class: "btn-terminal" },
+                    { label: "> [ DENEGAR ACCESO ]", target: "success8", class: "btn-terminal deny" }
+                ]
+            },
+            fail8: {
+                text: `[ ! ] PELIGRO - ERROR [ ! ]
+Esa persona es un espía. 
+Incorrecto: "If I *stays* outside, the monsters will *eats* me."
+Correcto: "If I *stay* outside, the monsters will *eat* me."`,
+                buttons: [{ label: "> [ REINTENTAR NIVEL 8 ]", target: "case8", class: "btn-terminal" }]
+            },
+            success8: {
+                text: `[ ✓ ] CORRECTO. ACCESO DENEGADO.
+Espía detenido. Ya casi terminas tu turno.`,
+                buttons: [{ label: "> [ SIGUIENTE CIUDADANO ]", target: "case9", class: "btn-terminal" }]
+            },
+
+            // NIVEL 9 (INOCENTE - Gramática correcta)
+            case9: {
+                text: `NIVEL 9: CIUDADANO #910 
+[ESTADO: PENDIENTE]
+
+MENSAJE DEL CIUDADANO:
+"Hello. This is my ID. If you check my name, you will see I live here. Thank you."`,
+                buttons: [
+                    { label: "> [ APROBAR ACCESO ]", target: "success9", class: "btn-terminal" },
+                    { label: "> [ DENEGAR ACCESO ]", target: "fail9", class: "btn-terminal deny" }
+                ]
+            },
+            fail9: {
+                text: `[ ! ] ERROR DE PROCEDIMIENTO [ ! ]
+El ciudadano realmente vive aquí. Su condicional es 100% correcto.`,
+                buttons: [{ label: "> [ REINTENTAR NIVEL 9 ]", target: "case9", class: "btn-terminal" }]
+            },
+            success9: {
+                text: `[ ✓ ] CORRECTO. ACCESO APROBADO.
+Un ciudadano más regresa a su hogar. Prepárate, alguien importante se acerca.`,
+                buttons: [{ label: "> [ SIGUIENTE CIUDADANO ]", target: "case10", class: "btn-terminal" }]
+            },
+
+            // NIVEL 10 (LÍDER REBELDE + TRANSMEDIA)
+            case10: {
+                text: `NIVEL 10: CIUDADANO #001 (ALERTA ROJA)
+[ESTADO: PENDIENTE - MÚLTIPLES ANOMALÍAS]
+
+MENSAJE DEL CIUDADANO:
+"Guard! I am Cipher. If you stops me, the city will falls. Joins the resistance today!"`,
+                buttons: [
+                    { label: "> [ APROBAR ACCESO ]", target: "fail10", class: "btn-terminal" },
+                    { label: "> [ DENEGAR ACCESO ]", target: "success10", class: "btn-terminal deny" },
+                    { label: "> [ ACEPTAR INVITACIÓN (RED REBELDE) ]", target: "transmedia", class: "btn-terminal text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black" }
+                ]
+            },
+            fail10: {
+                text: `[ ! ] ERROR CRÍTICO [ ! ]
+Aprobaste por accidente al líder rebelde por no notar sus errores:
+"stops" (stop), "falls" (fall), "Joins" (Join). 
+Has sido despedido.`,
+                buttons: [{ label: "> [ REINTENTAR NIVEL 10 ]", target: "case10", class: "btn-terminal" }]
+            },
+            success10: {
+                text: `[ ✓ ] CORRECTO. LÍDER ATRAPADO.
+Identificaste los errores de Cipher. Eres el mejor agente de OmniCorp.`,
+                buttons: [{ label: "> [ FINALIZAR JUEGO ]", target: "end", class: "btn-terminal" }]
+            },
+            
+            // TRANSMEDIA (El Foro / Padlet)
+            transmedia: {
+                text: `<span class="glitch">SISTEMA HACKEADO...</span>
+<span class="text-white font-bold">BIENVENIDO A LA RESISTENCIA.</span>
+
+Decidiste unirte a nosotros. 
+
+TU MISIÓN AHORA:
+1. Sal de este juego y ve al foro de la clase (Padlet/Moodle).
+2. Escribe un mensaje EN INGLÉS a los otros compañeros.
+3. Usa oraciones con "If" para advertirles de un peligro.
+   (Ejemplo: "If the boss sees you, you will lose your job").
+4. Dales órdenes usando Imperativos.
+   (Ejemplo: "Hide your name. Do not trust OmniCorp").
+
+Mantente a salvo.`,
+                buttons: [
+                    { label: "> [ TERMINAR JUEGO ]", target: "end", class: "btn-terminal" }
+                ]
+            },
+
+            // FINAL
+            end: {
+                text: `TURNO TERMINADO.
+Has completado los 10 niveles del Portal Biométrico.
+Cerrando sesión...
+
+¡Buen trabajo en tu clase de inglés!`,
+                buttons: [
+                    { label: "> [ VOLVER A JUGAR ]", target: "boot", class: "btn-terminal" }
+                ]
+            }
+        };
+
+        const contentArea = document.getElementById('content-area');
+        const controlsArea = document.getElementById('controls-area');
+        let typingTimeout;
+
+        function typeText(text, element, speed = 20) {
+            element.innerHTML = '';
+            let i = 0;
+            
+            // Allow HTML inside the text by temporarily hiding the typing effect for HTML tags
+            element.innerHTML = text; 
+            // Note: For a true typing effect with HTML, we'd need a more complex parser. 
+            // For this cyber-terminal, a quick reveal or simple insertion works best to not break tags.
+            // Let's simulate a quick data load instead of letter-by-letter to support HTML securely.
+            
+            element.classList.add('opacity-0');
+            setTimeout(() => {
+                element.classList.remove('opacity-0');
+                element.classList.add('transition-opacity', 'duration-500');
+            }, 50);
+        }
+
+        function loadScreen(screenId) {
+            const screen = gameData[screenId];
+            if (!screen) return;
+
+            // Clear controls temporarily
+            controlsArea.innerHTML = '';
+
+            // Render Text
+            const textContainer = document.createElement('div');
+            textContainer.className = 'typing-effect text-sm sm:text-base md:text-lg flex-grow whitespace-pre-wrap';
+            contentArea.innerHTML = '';
+            contentArea.appendChild(textContainer);
+            
+            typeText(screen.text, textContainer);
+
+            // Add cursor
+            const cursor = document.createElement('span');
+            cursor.className = 'cursor';
+            textContainer.appendChild(cursor);
+
+            // Render Buttons with a slight delay
+            setTimeout(() => {
+                screen.buttons.forEach(btn => {
+                    const button = document.createElement('button');
+                    button.className = `p-3 w-full text-left font-bold tracking-wider rounded uppercase ${btn.class}`;
+                    button.innerText = btn.label;
+                    button.onclick = () => loadScreen(btn.target);
+                    controlsArea.appendChild(button);
+                });
+            }, 600); // Delay buttons until text "loads"
+        }
+
+        // Initialize game
+        window.onload = () => {
+            loadScreen('boot');
+        };
+    </script>
+</body>
+</html>
